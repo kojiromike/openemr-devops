@@ -1,0 +1,93 @@
+name: ShellCheck
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**.sh'
+      - '.github/workflows/shellcheck.yml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.sh'
+      - '.github/workflows/shellcheck.yml'
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup PHP with cs2pr
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          # cs2pr enables us to convert checkstyle output to github annotations
+          tools: cs2pr
+      - name: Get changed shell files
+        id: changed-files
+        # We run shellcheck on all unique shell files in the repo
+        # if only the workflow file itself is changed in a PR.
+        # Thus we validate changes to the workflow file.
+        continue-on-error: true
+        uses: tj-actions/changed-files@v35
+        with:
+          files: '**.sh'
+      - name: Create unique files list
+        id: unique-files
+        run: |
+          set -x
+          # Create a temp directory to store file hashes
+          mkdir -p /tmp/shellcheck-hashes
+
+          # Initialize variable to hold unique files
+          unique_files=''
+
+          # If the changed-files step failed or returned empty,
+          # use git to find all shell files in the repo.
+          if [[ "${{ steps.changed-files.outcome }}" != "success" || -z "${{ steps.changed-files.outputs.all_changed_files }}" ]]; then
+            echo 'No changed files found, checking all shell files in the repo.'
+            # Get all shell files in the repo
+            files_to_check=( $(git ls-files '*.sh') )
+          else
+            echo 'Changed files found, checking only those.'
+            set -f  # disable glob expansion
+            files_to_check=( ${{ steps.changed-files.outputs.all_changed_files }} )
+            set +f  # re-enable glob expansion
+          fi
+
+          unique_files=()
+          # Process each changed file
+          for file in "${files_to_check[@]}"; do
+            [[ -f "$file" ]] || continue
+            # Get hash of file content
+            hash=$(sha256sum "$file" | cut -d ' ' -f 1)
+            # Check if we've seen this hash before
+            [[ -f "/tmp/shellcheck-hashes/$hash" ]] && continue
+            # New unique file
+            > "/tmp/shellcheck-hashes/$hash"
+            unique_files+=( "$file" )
+          done
+
+          # This relies on one space between each path name.
+          echo "files=${unique_files[*]}" >> "$GITHUB_OUTPUT"
+      - name: Run shellcheck on unique files
+        run: |
+          if [[ -z "${{ steps.unique-files.outputs.files }}" ]]; then
+            echo "No shell files to check."
+            exit 0
+          fi
+          shellcheck --check-sourced --external-sources --format=checkstyle ${{ steps.unique-files.outputs.files }} | tee checkstyle-shellcheck.xml
+      - uses: staabm/annotate-pull-request-from-checkstyle-action@v1
+        if: always()
+        with:
+          files: checkstyle-shellcheck.xml
+          notices-as-warnings: true
+      - name: Upload shellcheck results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shellcheck-results
+          path: checkstyle-shellcheck.xml
+          if-no-files-found: error
