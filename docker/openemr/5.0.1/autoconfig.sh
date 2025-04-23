@@ -30,10 +30,10 @@ if [ "$DOMAIN" != "" ]; then
     fi
     # if a domain has been set, set up LE and target those certs
 
-    if ! [ -f /etc/letsencrypt/live/$DOMAIN/fullchain.pem ]; then
+    if ! [ -f /etc/letsencrypt/live/"$DOMAIN"/fullchain.pem ]; then
         /usr/sbin/httpd -k start
         sleep 2
-        certbot certonly --webroot -n -w /var/www/localhost/htdocs/openemr/ -d $DOMAIN $EMAIL --agree-tos
+        certbot certonly --webroot -n -w /var/www/localhost/htdocs/openemr/ -d "$DOMAIN" "$EMAIL" --agree-tos
         /usr/sbin/httpd -k stop
         echo "1 23  *   *   *   certbot renew -q --post-hook \"httpd -k graceful\"" >> /etc/crontabs/root
     fi
@@ -42,8 +42,8 @@ if [ "$DOMAIN" != "" ]; then
     # run letsencrypt as a daemon and reference the correct cert
     rm -f /etc/ssl/certs/webserver.cert.pem
     rm -f /etc/ssl/private/webserver.key.pem
-    ln -s /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/ssl/certs/webserver.cert.pem
-    ln -s /etc/letsencrypt/live/$DOMAIN/privkey.pem /etc/ssl/private/webserver.key.pem
+    ln -s /etc/letsencrypt/live/"$DOMAIN"/fullchain.pem /etc/ssl/certs/webserver.cert.pem
+    ln -s /etc/letsencrypt/live/"$DOMAIN"/privkey.pem /etc/ssl/private/webserver.key.pem
 fi
 
 auto_setup() {
@@ -69,18 +69,19 @@ auto_setup() {
     fi
 
     chmod -R 600 .
+    # shellcheck disable=SC2086
     php auto_configure.php -f ${CONFIGURATION} || return 1
 
     echo "OpenEMR configured."
     CONFIG=$(php -r "require_once('/var/www/localhost/htdocs/openemr/sites/default/sqlconf.php'); echo \$config;")
-    if [ "$CONFIG" == "0" ]; then
+    if [ "$CONFIG" = "0" ]; then
         echo "Error in auto-config. Configuration failed."
         exit 2
     fi
 }
 
 CONFIG=$(php -r "require_once('/var/www/localhost/htdocs/openemr/sites/default/sqlconf.php'); echo \$config;")
-if [ "$CONFIG" == "0" ] &&
+if [ "$CONFIG" = "0" ] &&
    [ "$MYSQL_HOST" != "" ] &&
    [ "$MYSQL_ROOT_PASS" != "" ] &&
    [ "$MANUAL_SETUP" != "yes" ]; then
@@ -96,7 +97,7 @@ if [ "$CONFIG" == "0" ] &&
     echo "Setup Complete!"
 fi
 
-if [ "$CONFIG" == "1" ]; then
+if [ "$CONFIG" = "1" ]; then
     # OpenEMR has been configured
     if [ -f auto_configure.php ]; then
         # This section only runs once after above configuration since auto_configure.php gets removed after this script

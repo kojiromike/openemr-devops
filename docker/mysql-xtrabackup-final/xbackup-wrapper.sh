@@ -2,7 +2,7 @@
 
 exec > /tmp/xtrabackup-launch.log 2>&1
 
-cd /root
+cd /root || exit
 
 # if you recover into a clean system, initial xbackup.sh init was run back then and should not repeat
 if [ -f restore-process-complete ]; then
@@ -27,7 +27,7 @@ fi
 
 # I don't like forcing it like this, but if the backup fails one day, we need to try it the next
 # here's the problem: manual run during an automated run will cause destruction and havoc and woe
-if [ $(date +%u) == 7 ]; then
+if [ 7 = "$(date +%u)" ]; then
   ./xbackup.sh -t full -f
 else
   ./xbackup.sh -t incr -f
