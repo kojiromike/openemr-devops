@@ -33,7 +33,7 @@ jobs:
         # if only the workflow file itself is changed in a PR.
         # Thus we validate changes to the workflow file.
         continue-on-error: true
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v46
         with:
           files: '**.sh'
       - name: Create unique files list
