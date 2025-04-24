@@ -12,14 +12,9 @@ set -e
 source /root/devtoolsLibrary.source
 
 swarm_wait() {
-    if [ ! -f /var/www/localhost/htdocs/openemr/sites/docker-completed ]; then
-        # true
-        return 0
-    else
-        # false
-        return 1
-    fi
+    [ ! -f /var/www/localhost/htdocs/openemr/sites/docker-completed ]
 }
+
 
 auto_setup() {
     prepareVariables
