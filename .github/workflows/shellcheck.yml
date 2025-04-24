@@ -3,15 +3,34 @@ on:
   push:
     branches:
       - master
+    # GitHub Actions do not support YAML anchors
     paths:
       - '**.sh'
       - '.github/workflows/shellcheck.yml'
+      - 'docker/openemr/flex-*/utilities/devtools'
+      - 'kubernetes/kub-down'
+      - 'kubernetes/kub-up'
+      - 'packages/standard/cfn/buildstacks.bat'  # ¯\_(ツ)_/¯
+      - 'utilities/openemr-cmd/openemr-cmd'
+      - 'utilities/openemr-cmd/openemr-cmd-h'
+      - 'utilities/openemr-env-installer/openemr-env-installer'
+      - 'utilities/openemr-env-migrator/openemr-env-migrator'
+      - 'utilities/openemr-monitor/monitor-installer'
   pull_request:
     branches:
       - master
     paths:
       - '**.sh'
       - '.github/workflows/shellcheck.yml'
+      - 'docker/openemr/flex-*/utilities/devtools'
+      - 'kubernetes/kub-down'
+      - 'kubernetes/kub-up'
+      - 'packages/standard/cfn/buildstacks.bat'  # ¯\_(ツ)_/¯
+      - 'utilities/openemr-cmd/openemr-cmd'
+      - 'utilities/openemr-cmd/openemr-cmd-h'
+      - 'utilities/openemr-env-installer/openemr-env-installer'
+      - 'utilities/openemr-env-migrator/openemr-env-migrator'
+      - 'utilities/openemr-monitor/monitor-installer'
 jobs:
   shellcheck:
     name: ShellCheck
@@ -32,7 +51,17 @@ jobs:
         continue-on-error: true
         uses: tj-actions/changed-files@v46
         with:
-          files: '**.sh'
+          files: |
+            **.sh
+            docker/openemr/flex-*/utilities/devtools
+            kubernetes/kub-down
+            kubernetes/kub-up
+            packages/standard/cfn/buildstacks.bat
+            utilities/openemr-cmd/openemr-cmd
+            utilities/openemr-cmd/openemr-cmd-h
+            utilities/openemr-env-installer/openemr-env-installer
+            utilities/openemr-env-migrator/openemr-env-migrator
+            utilities/openemr-monitor/monitor-installer
       - name: Create unique files list
         id: unique-files
         run: |
