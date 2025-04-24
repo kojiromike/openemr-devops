@@ -79,7 +79,7 @@ jobs:
 
           # If the changed-files step failed or returned empty,
           # use git to find all shell files in the repo.
-          if [[ "${{ steps.changed-files.outcome }}" = "success" && "${{ steps.changed-files.outputs.any_changed }} = true ]]; then
+          if [[ "${{ steps.changed-files.outcome }}" = success && "${{ steps.changed-files.outputs.any_changed }}" = true ]]; then
             echo 'Changed files found, checking only those.'
             set -f  # disable glob expansion
             files_to_check=( ${{ steps.changed-files.outputs.all_changed_files }} )
