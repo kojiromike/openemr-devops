@@ -4,12 +4,14 @@ on:
   push:
     branches:
       - master
+      - test/master
     paths:
       - '**.sh'
       - '.github/workflows/shellcheck.yml'
   pull_request:
     branches:
       - master
+      - test/master
     paths:
       - '**.sh'
       - '.github/workflows/shellcheck.yml'
