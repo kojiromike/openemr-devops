@@ -39,7 +39,7 @@ swarm_wait() {
 auto_setup() {
     prepareVariables
 
-    if [[ "${EASY_DEV_MODE}" != "yes" ]]; then
+    if [[ "${EASY_DEV_MODE}" != yes ]]; then
         find /var/www/localhost/htdocs/openemr -not -perm 600 -exec chmod 600 {} \+
     fi
 
@@ -69,18 +69,18 @@ auto_setup() {
     #remove temporary file cache directory and auto_configure.ini
     rm -r "${TMP_FILE_CACHE_LOCATION}" auto_configure.ini
 
-    echo "OpenEMR configured."
+    echo 'OpenEMR configured.'
     CONFIG=$(php -r "require_once('/var/www/localhost/htdocs/openemr/sites/default/sqlconf.php'); echo \$config;")
-    if [[ "${CONFIG}" = "0" ]]; then
-        echo "Error in auto-config. Configuration failed."
+    if (( CONFIG == 0 )); then
+        echo 'Error in auto-config. Configuration failed.'
         exit 2
     fi
 
-    if [[ "${DEMO_MODE:?}" = "standard" ]]; then
+    if [[ "${DEMO_MODE:?}" = standard ]]; then
         demoData
     fi
 
-    if [[ "${SQL_DATA_DRIVE:?}" != "" ]]; then
+    if [[ -n "${SQL_DATA_DRIVE:?}" ]]; then
         sqlDataDrive
     fi
 
@@ -95,55 +95,55 @@ auto_setup() {
 # - false for the Kubernetes startup job and manual image runs
 AUTHORITY=yes
 OPERATOR=yes
-if [[ "${K8S:?}" = "admin" ]]; then
+if [[ "${K8S:?}" = admin ]]; then
     OPERATOR=no
-elif [[ "${K8S:?}" = "worker" ]]; then
+elif [[ "${K8S:?}" = worker ]]; then
     AUTHORITY=no
 fi
 
-if [[ "${SWARM_MODE:?}" = "yes" ]]; then
+if [[ "${SWARM_MODE:?}" = yes ]]; then
     # atomically test for leadership
     set -o noclobber
     { : > /var/www/localhost/htdocs/openemr/sites/docker-leader ; } &> /dev/null || AUTHORITY=no
     set +o noclobber
 
-    if [[ "${AUTHORITY}" = "no" && ! -f /var/www/localhost/htdocs/openemr/sites/docker-completed ]]; then
+    if [[ "${AUTHORITY}" = no && ! -f /var/www/localhost/htdocs/openemr/sites/docker-completed ]]; then
         # shellcheck disable=SC2310
         while swarm_wait; do
-            echo "Waiting for the docker-leader to finish configuration before proceeding."
+            echo 'Waiting for the docker-leader to finish configuration before proceeding.'
             sleep 10;
         done
     fi
 
-    if [[ "${AUTHORITY}" = "yes" ]]; then
+    if [[ "${AUTHORITY}" = yes ]]; then
         touch /var/www/localhost/htdocs/openemr/sites/docker-initiated
         if [[ ! -f /etc/ssl/openssl.cnf ]]; then
             # Restore the emptied /etc/ssl directory
-            echo "Restoring empty /etc/ssl directory."
+            echo 'Restoring empty /etc/ssl directory.'
             rsync --owner --group --perms --recursive --links /swarm-pieces/ssl /etc/
         fi
     fi
 fi
 
-if [[ "${AUTHORITY}" = "yes" ]]; then
+if [[ "${AUTHORITY}" = yes ]]; then
     sh ssl.sh
 fi
 
 # this is the primary flex orchestration block
-if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${EMPTY:?}" != "yes" && "${EASY_DEV_MODE_NEW}" != "yes" ]]; then
-    echo "Configuring a new flex openemr docker"
-    if [[ "${FLEX_REPOSITORY}" = "" ]]; then
-        echo "Missing FLEX_REPOSITORY environment setting, so using https://github.com/openemr/openemr.git"
-        FLEX_REPOSITORY="https://github.com/openemr/openemr.git"
+if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${EMPTY:?}" != yes && "${EASY_DEV_MODE_NEW}" != yes ]]; then
+    echo 'Configuring a new flex openemr docker'
+    if [[ -z "${FLEX_REPOSITORY}" ]]; then
+        echo 'Missing FLEX_REPOSITORY environment setting, so using https://github.com/openemr/openemr.git'
+        FLEX_REPOSITORY=https://github.com/openemr/openemr.git
     fi
-    if [[ "${FLEX_REPOSITORY_BRANCH}" = "" && "${FLEX_REPOSITORY_TAG:?}" = "" ]]; then
-        echo "Missing FLEX_REPOSITORY_BRANCH or FLEX_REPOSITORY_TAG environment setting, so using FLEX_REPOSITORY_BRANCH setting of master"
-        FLEX_REPOSITORY_BRANCH="master"
+    if [[ -z "${FLEX_REPOSITORY_BRANCH}" && -z "${FLEX_REPOSITORY_TAG:?}" ]]; then
+        echo 'Missing FLEX_REPOSITORY_BRANCH or FLEX_REPOSITORY_TAG environment setting, so using FLEX_REPOSITORY_BRANCH setting of master'
+        FLEX_REPOSITORY_BRANCH=master
     fi
 
     cd /
 
-    if [[ "${FLEX_REPOSITORY_BRANCH}" != "" ]]; then
+    if [[ -n "${FLEX_REPOSITORY_BRANCH}" ]]; then
         echo "Collecting ${FLEX_REPOSITORY_BRANCH} branch from ${FLEX_REPOSITORY} repository"
         git clone "${FLEX_REPOSITORY}" --branch "${FLEX_REPOSITORY_BRANCH}" --depth 1
     else
@@ -153,12 +153,12 @@ if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${EMPTY:?}" != "yes" &
         git checkout "${FLEX_REPOSITORY_TAG}"
         cd ../
     fi
-    if [[ "${AUTHORITY}" = "yes" ]] &&
-       [[ "${SWARM_MODE}" = "yes" ]]; then
+    if [[ "${AUTHORITY}" = yes ]] &&
+       [[ "${SWARM_MODE}" = yes ]]; then
         touch openemr/sites/default/docker-initiated
     fi
-    if [[ "${AUTHORITY}" = "no" ]] &&
-       [[ "${SWARM_MODE}" = "yes" ]]; then
+    if [[ "${AUTHORITY}" = no ]] &&
+       [[ "${SWARM_MODE}" = yes ]]; then
         # non-leader is building so remove the openemr/sites directory to avoid breaking anything in leader's build
         rm -fr openemr/sites
     fi
@@ -167,7 +167,7 @@ if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${EMPTY:?}" != "yes" &
     cd /var/www/localhost/htdocs/
 fi
 
-if [[ "${EASY_DEV_MODE_NEW}" = "yes" ]]; then
+if [[ "${EASY_DEV_MODE_NEW}" = yes ]]; then
     # trickery for the easy dev environment
     rsync --ignore-existing --recursive --links --exclude .git /openemr /var/www/localhost/htdocs/
 fi
@@ -183,12 +183,12 @@ is_populated_dir() {
 }
 
 # shellcheck disable=SC2310
-if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${FORCE_NO_BUILD_MODE:?}" != "yes" ]] && ! is_populated_dir /var/www/localhost/htdocs/openemr/vendor; then
+if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${FORCE_NO_BUILD_MODE:?}" != yes ]] && ! is_populated_dir /var/www/localhost/htdocs/openemr/vendor; then
     cd /var/www/localhost/htdocs/openemr
 
     # if there is a raw github composer token supplied, then try to use it
-    if [[ "${GITHUB_COMPOSER_TOKEN:?}" != "" ]]; then
-        echo "trying raw github composer token"
+    if [[ -n "${GITHUB_COMPOSER_TOKEN:?}" ]]; then
+        echo 'trying raw github composer token'
         githubTokenRateLimitRequest=$(curl -H "Authorization: token ${GITHUB_COMPOSER_TOKEN}" https://api.github.com/rate_limit)
         githubTokenRateLimit=$(<<< "${githubTokenRateLimitRequest}" jq '.rate.remaining')
         githubTokenRateLimitMessage=$(<<< "${githubTokenRateLimitRequest}" jq '.message')
@@ -196,23 +196,23 @@ if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${FORCE_NO_BUILD_MODE:
         printf 'Message received from api request is "%s"\n' "${githubTokenRateLimitMessage}"
         if (( githubTokenRateLimit > 100 )); then
             if composer config --global --auth github-oauth.github.com "${GITHUB_COMPOSER_TOKEN}"; then
-                echo "raw github composer token worked"
-                rawToken="pass"
+                echo 'raw github composer token worked'
+                rawToken=pass
             else
-                echo "raw github composer token did not work"
+                echo 'raw github composer token did not work'
             fi
         else
             if [[ "${githubTokenRateLimitMessage}" = '"Bad credentials"' ]]; then
-                echo "raw github composer token is bad, so did not work"
+                echo 'raw github composer token is bad, so did not work'
             else
-                echo "raw github composer token rate limit is now < 100, so did not work"
+                echo 'raw github composer token rate limit is now < 100, so did not work'
             fi
         fi
     fi
     # if there is no raw github composer token supplied or it was invalid, try a base64 encoded one (if it was supplied)
-    if [[ "${GITHUB_COMPOSER_TOKEN_ENCODED:?}" != "" ]]; then
-        if [[ "${rawToken}" != "pass" ]]; then
-            echo "trying encoded github composer token"
+    if [[ -n "${GITHUB_COMPOSER_TOKEN_ENCODED:?}" ]]; then
+        if [[ "${rawToken}" != pass ]]; then
+            echo 'trying encoded github composer token'
             githubToken=$(<<< "${GITHUB_COMPOSER_TOKEN_ENCODED}" base64 -d)
             githubTokenRateLimitRequest=$(curl -H "Authorization: token ${githubToken}" https://api.github.com/rate_limit)
             githubTokenRateLimit=$(<<< "${githubTokenRateLimitRequest}" jq '.rate.remaining')
@@ -221,15 +221,15 @@ if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${FORCE_NO_BUILD_MODE:
             printf 'Message received from api request is "%s"\n' "${githubTokenRateLimitMessage}"
             if (( githubTokenRateLimit > 100 )); then
                 if composer config --global --auth github-oauth.github.com "${githubToken}"; then
-                    echo "encoded github composer token worked"
+                    echo 'encoded github composer token worked'
                 else
-                    echo "encoded github composer token did not work"
+                    echo 'encoded github composer token did not work'
                 fi
             else
                 if [[ "${githubTokenRateLimitMessage}" = '"Bad credentials"' ]]; then
-                    echo "encoded github composer token is bad, so did not work"
+                    echo 'encoded github composer token is bad, so did not work'
                 else
-                    echo "encoded github composer token rate limit is now < 100, so did not work"
+                    echo 'encoded github composer token rate limit is now < 100, so did not work'
                 fi
             fi
         fi
@@ -237,7 +237,7 @@ if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${FORCE_NO_BUILD_MODE:
     # install php dependencies
     if [[ "${DEVELOPER_TOOLS:?}" = yes ]]; then
         composer install
-        composer global require "squizlabs/php_codesniffer=3.*"
+        composer global require 'squizlabs/php_codesniffer=3.*'
         # install support for the e2e testing
         apk update
         apk add --no-cache chromium chromium-chromedriver
@@ -288,8 +288,8 @@ if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${FORCE_NO_BUILD_MODE:
     cd /var/www/localhost/htdocs
 fi
 
-if [[ "${AUTHORITY}" = "yes" || "${SWARM_MODE}" != "yes" ]]; then
-    if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${EASY_DEV_MODE}" != "yes" ]]; then
+if [[ "${AUTHORITY}" = yes || "${SWARM_MODE}" != yes ]]; then
+    if [[ -f /var/www/localhost/htdocs/auto_configure.php && "${EASY_DEV_MODE}" != yes ]]; then
         chmod 666 /var/www/localhost/htdocs/openemr/sites/default/sqlconf.php
     fi
 fi
@@ -299,10 +299,10 @@ if [[ -f /var/www/localhost/htdocs/auto_configure.php ]]; then
 fi
 
 CONFIG=$(php -r "require_once('/var/www/localhost/htdocs/openemr/sites/default/sqlconf.php'); echo \$config;")
-if [[ "${AUTHORITY}" = "no" && "${CONFIG}" = "0" ]]; then
-    echo "Critical failure! An OpenEMR worker is trying to run on a missing configuration."
-    echo " - Is this due to a Kubernetes grant hiccup?"
-    echo "The worker will now terminate."
+if [[ "${AUTHORITY}" = no ]] && (( CONFIG == 0 )); then
+    echo 'Critical failure! An OpenEMR worker is trying to run on a missing configuration.'
+    echo ' - Is this due to a Kubernetes grant hiccup?'
+    echo 'The worker will now terminate.'
     exit 1
 fi
 
@@ -321,106 +321,96 @@ fi
 #    /root/certs/redis/.. (not yet supported)
 MYSQLCA=false
 if [[ -f /root/certs/mysql/server/mysql-ca && ! -f /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/mysql-ca ]]; then
-    echo "copied over mysql-ca"
+    echo 'copied over mysql-ca'
     cp /root/certs/mysql/server/mysql-ca /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/mysql-ca
     # for specific issue in docker and kubernetes that is required for successful openemr adodb/laminas connections
     MYSQLCA=true
 fi
 MYSQLCERT=false
 if [[ -f /root/certs/mysql/server/mysql-cert && ! -f /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/mysql-cert ]]; then
-    echo "copied over mysql-cert"
+    echo 'copied over mysql-cert'
     cp /root/certs/mysql/server/mysql-cert /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/mysql-cert
     # for specific issue in docker and kubernetes that is required for successful openemr adodb/laminas connections
     MYSQLCERT=true
 fi
 MYSQLKEY=false
 if [[ -f /root/certs/mysql/server/mysql-key && ! -f /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/mysql-key ]]; then
-    echo "copied over mysql-key"
+    echo 'copied over mysql-key'
     cp /root/certs/mysql/server/mysql-key /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/mysql-key
     # for specific issue in docker and kubernetes that is required for successful openemr adodb/laminas connections
     MYSQLKEY=true
 fi
 if [[ -f /root/certs/couchdb/couchdb-ca && ! -f /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/couchdb-ca ]]; then
-    echo "copied over couchdb-ca"
+    echo 'copied over couchdb-ca'
     cp /root/certs/couchdb/couchdb-ca /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/couchdb-ca
 fi
 if [[ -f /root/certs/couchdb/couchdb-cert && ! -f /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/couchdb-cert ]]; then
-    echo "copied over couchdb-cert"
+    echo 'copied over couchdb-cert'
     cp /root/certs/couchdb/couchdb-cert /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/couchdb-cert
 fi
 if [[ -f /root/certs/couchdb/couchdb-key && ! -f /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/couchdb-key ]]; then
-    echo "copied over couchdb-key"
+    echo 'copied over couchdb-key'
     cp /root/certs/couchdb/couchdb-key /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/couchdb-key
 fi
 if [[ -f /root/certs/ldap/ldap-ca && ! -f /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/ldap-ca ]]; then
-    echo "copied over ldap-ca"
+    echo 'copied over ldap-ca'
     cp /root/certs/ldap/ldap-ca /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/ldap-ca
 fi
 if [[ -f /root/certs/ldap/ldap-cert && ! -f /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/ldap-cert ]]; then
-    echo "copied over ldap-cert"
+    echo 'copied over ldap-cert'
     cp /root/certs/ldap/ldap-cert /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/ldap-cert
 fi
 if [[ -f /root/certs/ldap/ldap-key && ! -f /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/ldap-key ]]; then
-    echo "copied over ldap-key"
+    echo 'copied over ldap-key'
     cp /root/certs/ldap/ldap-key /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/ldap-key
 fi
 
-if [[ "${AUTHORITY}" = "yes" ]]; then
-    if [[ "${CONFIG}" = "0" && "${MYSQL_HOST}" != "" && "${MYSQL_ROOT_PASS}" != "" && "${EMPTY}" != "yes" && "${MANUAL_SETUP}" != "yes" ]]; then
-
-        echo "Running quick setup!"
+if [[ "${AUTHORITY}" = yes && "${EMPTY}" != yes && "${MANUAL_SETUP}" != yes ]]; then
+    if (( CONFIG == 0 )) && [[ -n "${MYSQL_HOST}" && -n "${MYSQL_ROOT_PASS}" ]]; then
+        echo 'Running quick setup!'
         # shellcheck disable=SC2310
         while ! auto_setup; do
             echo "Couldn't set up. Any of these reasons could be what's wrong:"
             echo " - You didn't spin up a MySQL container or connect your OpenEMR container to a mysql instance"
             echo " - MySQL is still starting up and wasn't ready for connection yet"
-            echo " - The Mysql credentials were incorrect"
+            echo ' - The Mysql credentials were incorrect'
             sleep 1;
         done
-        echo "Setup Complete!"
-    fi
-fi
+        echo 'Setup Complete!'
 
-if [[ "${AUTHORITY}" = "yes" && "${CONFIG}" = "1" && "${MANUAL_SETUP}" != "yes" && "${EASY_DEV_MODE}" != "yes" && "${EMPTY}" != "yes" ]]; then
-    # OpenEMR has been configured
+    if (( CONFIG == 1 )) && [[ "${EASY_DEV_MODE}" != yes && -f /var/www/localhost/htdocs/auto_configure.php ]]; then
+        (
+            cd /var/www/localhost/htdocs/openemr/ || exit 1
+            # This section only runs once after above configuration since auto_configure.php gets removed after this script
+            echo "Setting user 'www' as owner of openemr/ and setting file/dir permissions to 400/500"
 
-    if [[ -f /var/www/localhost/htdocs/auto_configure.php ]]; then
-        cd /var/www/localhost/htdocs/openemr/
-        # This section only runs once after above configuration since auto_configure.php gets removed after this script
-        echo "Setting user 'www' as owner of openemr/ and setting file/dir permissions to 400/500"
+            #set all directories to 500
+            find . -type d -not -path "./sites/default/documents/*" -not -perm 500 -exec chmod 500 {} \+
+            #set all file access to 400
+            find . -type f -not -path "./sites/default/documents/*" -not -path './openemr.sh' -not -perm 400 -exec chmod 400 {} \+
 
-        #set all directories to 500
-        find . -type d -not -path "./sites/default/documents/*" -not -perm 500 -exec chmod 500 {} \+
-        #set all file access to 400
-        find . -type f -not -path "./sites/default/documents/*" -not -path './openemr.sh' -not -perm 400 -exec chmod 400 {} \+
+            echo 'Default file permissions and ownership set, allowing writing to specific directories'
+            chmod 700 /var/www/localhost/htdocs/openemr.sh
+            # Set file and directory permissions
+            find sites/default/documents -not -perm 700 -exec chmod 700 {} \+
 
-        echo "Default file permissions and ownership set, allowing writing to specific directories"
-        chmod 700 /var/www/localhost/htdocs/openemr.sh
-        # Set file and directory permissions
-        find sites/default/documents -not -perm 700 -exec chmod 700 {} \+
-
-        echo "Removing remaining setup scripts"
-        #remove all setup scripts
-        rm -f admin.php
-        rm -f acl_upgrade.php
-        rm -f setup.php
-        rm -f sql_patch.php
-        rm -f sql_upgrade.php
-        rm -f ippf_upgrade.php
-        echo "Setup scripts removed, we should be ready to go now!"
-        cd /var/www/localhost/htdocs/
+            echo 'Removing remaining setup scripts'
+            #remove all setup scripts
+            rm -f admin.php acl_upgrade.php setup.php sql_patch.php sql_upgrade.php ippf_upgrade.php
+            echo 'Setup scripts removed, we should be ready to go now!'
+        )
     fi
 fi
 
 if [[ -f /var/www/localhost/htdocs/auto_configure.php ]]; then
-    if [[ "${EASY_DEV_MODE_NEW}" = "yes" || "${INSANE_DEV_MODE}" = "yes" ]]; then
+    if [[ "${EASY_DEV_MODE_NEW}" = yes || "${INSANE_DEV_MODE}" = yes ]]; then
         # need to copy this script somewhere so the easy/insane dev environment can use it
         cp /var/www/localhost/htdocs/auto_configure.php /root/
         # save couchdb initial data folder to support devtools snapshots
         rsync --recursive --links /couchdb/data /couchdb/original/
     fi
     # trickery to support devtools in insane dev environment (note the easy dev does this with a shared volume)
-    if [[ "${INSANE_DEV_MODE}" = "yes" ]]; then
+    if [[ "${INSANE_DEV_MODE}" = yes ]]; then
         mkdir /openemr
         rsync --recursive --links /var/www/localhost/htdocs/openemr/sites /openemr/
     fi
@@ -428,21 +418,21 @@ fi
 
 if ${MYSQLCA} ; then
     # for specific issue in docker and kubernetes that is required for successful openemr adodb/laminas connections
-    echo "adjusted permissions for mysql-ca"
+    echo 'adjusted permissions for mysql-ca'
     chmod 744 /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/mysql-ca
 fi
 if ${MYSQLCERT} ; then
     # for specific issue in docker and kubernetes that is required for successful openemr adodb/laminas connections
-    echo "adjusted permissions for mysql-cert"
+    echo 'adjusted permissions for mysql-cert'
     chmod 744 /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/mysql-cert
 fi
 if ${MYSQLKEY} ; then
     # for specific issue in docker and kubernetes that is required for successful openemr adodb/laminas connections
-    echo "adjusted permissions for mysql-key"
+    echo 'adjusted permissions for mysql-key'
     chmod 744 /var/www/localhost/htdocs/openemr/sites/default/documents/certificates/mysql-key
 fi
 
-if [[ "${AUTHORITY}" = "yes" && "${SWARM_MODE}" = "yes" && -f /var/www/localhost/htdocs/auto_configure.php ]]; then
+if [[ "${AUTHORITY}" = yes && "${SWARM_MODE}" = yes && -f /var/www/localhost/htdocs/auto_configure.php ]]; then
     # Set flag that the docker-leader configuration is complete
     touch /var/www/localhost/htdocs/openemr/sites/docker-completed
     rm -f /var/www/localhost/htdocs/openemr/sites/docker-leader
@@ -451,7 +441,7 @@ fi
 # ensure the auto_configure.php script has been removed
 rm -f /var/www/localhost/htdocs/auto_configure.php
 
-if [[ "${REDIS_SERVER}" != "" && ! -f /etc/php-redis-configured ]]; then
+if [[ -n "${REDIS_SERVER}" && ! -f /etc/php-redis-configured ]]; then
 
     # Support the following redis auth:
     #   No username and No password set (using redis default user with nopass set)
@@ -459,18 +449,18 @@ if [[ "${REDIS_SERVER}" != "" && ! -f /etc/php-redis-configured ]]; then
     #   Only password set (using redis default user and pertinent password)
     #   NOTE that only username set is not supported (in this case will ignore the username
     #      and use no username and no password set mode)
-    REDIS_PATH="tcp://${REDIS_SERVER}:6379"
-    if [[ "${REDIS_USERNAME}" != "" && "${REDIS_PASSWORD}" != "" ]]; then
-        echo "redis setup with username and password"
+    REDIS_PATH=tcp://${REDIS_SERVER}:6379
+    if [[ -n "${REDIS_USERNAME}" && -n "${REDIS_PASSWORD}" ]]; then
+        echo 'redis setup with username and password'
         REDIS_PATH+="?auth[user]=${REDIS_USERNAME}\&auth[pass]=${REDIS_PASSWORD}"
-    elif [[ "${REDIS_PASSWORD}" != "" ]]; then
-        echo "redis setup with password"
+    elif [[ -n "${REDIS_PASSWORD}" ]]; then
+        echo 'redis setup with password'
         # only a password, thus using the default user which redis has set a password for
         REDIS_PATH+="?auth[pass]=${REDIS_PASSWORD}"
     else
         # no user or password, thus using the default user which is set to nopass in redis
         # so just keeping original REDIS_PATH: REDIS_PATH="$REDIS_PATH"
-        echo "redis setup"
+        echo 'redis setup'
     fi
 
     sed -i "s@session.save_handler = files@session.save_handler = redis@" /etc/php84/php.ini
@@ -479,31 +469,33 @@ if [[ "${REDIS_SERVER}" != "" && ! -f /etc/php-redis-configured ]]; then
     touch /etc/php-redis-configured
 fi
 
-if [[ "${XDEBUG_IDE_KEY}" != "" || "${XDEBUG_ON:?}" = 1 ]]; then
+if [[ -n "${XDEBUG_IDE_KEY}" ]] || (( XDEBUG_ON == 1 )); then
    sh xdebug.sh
    #also need to turn off opcache since it can not be turned on with xdebug
    if [[ ! -f /etc/php-opcache-jit-configured ]]; then
-      echo "opcache.enable=0" >> /etc/php84/php.ini
+      echo 'opcache.enable=0' >> /etc/php84/php.ini
       touch /etc/php-opcache-jit-configured
    fi
 else
    # Configure opcache jit if Xdebug is not being used (note opcache is already on, so just need to add setting(s) to php.ini that are different from the default setting(s))
-   if [[ ! -f /etc/php-opcache-jit-configured ]]; then
-      echo "opcache.jit=tracing" >> /etc/php84/php.ini
-      echo "opcache.jit_buffer_size=100M" >> /etc/php84/php.ini
+    if [[ ! -f /etc/php-opcache-jit-configured ]]; then
+        {
+            echo 'opcache.jit=tracing'
+            echo 'opcache.jit_buffer_size=100M'
+        } >> /etc/php84/php.ini
       touch /etc/php-opcache-jit-configured
    fi
 fi
 
-echo ""
-echo "Love OpenEMR? You can now support the project via the open collective:"
-echo " > https://opencollective.com/openemr/donate"
-echo ""
+echo
+echo 'Love OpenEMR? You can now support the project via the open collective:'
+echo ' > https://opencollective.com/openemr/donate'
+echo
 
-if [[ "${OPERATOR}" = "yes" ]]; then
-    echo "Starting apache!"
+if [[ "${OPERATOR}" = yes ]]; then
+    echo 'Starting apache!'
     /usr/sbin/httpd -D FOREGROUND
 else
-    echo "OpenEMR configuration tasks have concluded."
+    echo 'OpenEMR configuration tasks have concluded.'
     exit 0
 fi
