@@ -105,8 +105,11 @@ jobs:
             UPDATE globals SET gl_value = 3 WHERE gl_name = "oauth_password_grant";
             UPDATE globals SET gl_value = 1 WHERE gl_name = "rest_system_scopes_api";
         ' openemr
+        # delete the platform check and then disable it so composer does not recreate it; otherwise
+        # PHP Fatal error:  Uncaught Error: Undefined constant "STDERR" in /var/www/localhost/htdocs/openemr/vendor/composer/platform_check.php:21
+        rm /var/www/localhost/htdocs/openemr/vendor/composer/platform_check.php
         docker compose exec --workdir /var/www/localhost/htdocs/openemr \
-          "${OPENEMR_SERVICE_NAME}" composer install --dev --no-interaction --optimize-autoloader
+          "${OPENEMR_SERVICE_NAME}" composer install --dev --no-interaction --optimize-autoloader --ignore-platform-reqs
 
     - name: Unit Test
       run: |
