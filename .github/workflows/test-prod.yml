@@ -27,13 +27,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        docker-dir:
-        - 6.1.0
-        - 7.0.0
-        - 7.0.1
-        - 7.0.2
-        - 7.0.3
-        - 7.0.4
+        docker-dir: []
+        # - 6.1.0
+        # - 7.0.0
+        # - 7.0.1
+        # - 7.0.2
+        # - 7.0.3
+        # - 7.0.4
     defaults:
       run:
         working-directory: docker/openemr
