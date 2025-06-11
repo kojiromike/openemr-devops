@@ -107,7 +107,7 @@ jobs:
         ' openemr
         # delete the platform check and then disable it so composer does not recreate it; otherwise
         # PHP Fatal error:  Uncaught Error: Undefined constant "STDERR" in /var/www/localhost/htdocs/openemr/vendor/composer/platform_check.php:21
-        rm /var/www/localhost/htdocs/openemr/vendor/composer/platform_check.php
+        rm ../../openemr/vendor/composer/platform_check.php
         docker compose exec --workdir /var/www/localhost/htdocs/openemr \
           "${OPENEMR_SERVICE_NAME}" composer install --dev --no-interaction --optimize-autoloader --ignore-platform-reqs
 
