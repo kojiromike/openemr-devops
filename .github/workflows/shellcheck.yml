@@ -126,6 +126,11 @@ jobs:
           echo "files=${unique_files[*]}" >> "$GITHUB_OUTPUT"
       - name: Run shellcheck on unique files
         if: ${{ steps.unique-files.outputs.files != '' }}
+        # Pipefail is somehow only enabled when we explicitly
+        # specify the shell as bash, even though bash is the
+        # default shell. I would complain further, but
+        # this kind of inconsistency is very shell-like anyway.
+        shell: bash
         run: |
           shellcheck --check-sourced --external-sources --format=checkstyle ${{ steps.unique-files.outputs.files }} | tee checkstyle-shellcheck.xml
       - uses: staabm/annotate-pull-request-from-checkstyle-action@v1
